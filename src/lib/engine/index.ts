@@ -57,7 +57,7 @@ export function _performSyntaxCheck(code: string): { error: NormalizedError | nu
 	return { error: transformAndThrowErrors(code, engineAPIKeys, () => {}), cleanup: () => void 0 };
 }
 
-export function runGame(code: string, canvas: HTMLCanvasElement, onPageError: (error: NormalizedError) => void): RunResult | undefined {
+export function runGame(code: string, container: HTMLElement, onPageError: (error: NormalizedError) => void): RunResult | undefined {
 	const game = webEngine(canvas)
 	const tunes: PlayTuneRes[] = []
 	const timeouts: number[] = []
