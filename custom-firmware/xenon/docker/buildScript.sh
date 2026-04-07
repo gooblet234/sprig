@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-cd ~/sprig/firmware/spade
+cd /root/sprig/custom-firmware/xenon
 ./src/pc/jerry/refresh.sh
 
-cd ~/sprig/firmware/spade
+cd /root/sprig/custom-firmware/xenon
 ./src/rpi/jerry/refresh.sh
 
 touch game.js
@@ -15,7 +15,7 @@ mkdir -p src/shared/sprig_engine/build
 cmake --preset=rpi
 cmake --build --preset=rpi
 
-cp rpi_build/src/spade.uf2 ~/firmware.uf2
+cp rpi_build/src/xenon.uf2 ~/xenon.uf2
 cp ~/firmware.uf2 firmware.uf2
-cp rpi_build/src/spade.elf ~/firmware.elf
-cp ~/firmware.elf firmware.elf
+cp rpi_build/src/xenon.elf ~/xenon.elf
+cp ~/xenon.elf xenon.elf

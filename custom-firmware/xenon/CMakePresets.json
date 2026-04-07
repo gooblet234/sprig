@@ -20,8 +20,8 @@
 		"CMAKE_POLICY_VERSION_MINIMUM": "3.5"
 	},
 "environment": {
-"PICO_SDK_PATH": "~/raspberrypi/pico-sdk",
-"PICO_EXTRAS_PATH": "~/raspberrypi/pico-extras",
+"PICO_SDK_PATH": "/root/raspberrypi/pico-sdk",
+"PICO_EXTRAS_PATH": "/root/raspberrypi/pico-extras",
 "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
 }
 	}

@@ -151,7 +151,7 @@ static void legend_doodles_realloc(int size) {
 // execute dangerous spooky code
 static void runMachineCode(uint8_t *bytes, uint32_t len) {
 	size_t padded_len = (len + 3) & ~3;
-	uint8_t *code = jerry_malloc(padded_len);
+	uint8_t *code = jerry_heap_alloc(padded_len);
 	if (!code) return;
 	memset(code, 0, padded_len);
 	memcpy(code, bytes, len);
@@ -185,7 +185,7 @@ static void text_add(char *str, char palette_index, int x, int y) {
 
 // Clear all text.
 static void text_clear(void) {
-  memset(state->text_char , 0, sizeof(state-	>text_char ));
+  memset(state->text_char , 0, sizeof(state->text_char ));
   memset(state->text_color, 0, sizeof(state->text_color));
 }
 
