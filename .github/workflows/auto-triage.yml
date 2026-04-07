@@ -2,8 +2,6 @@ name: Sprig Auto Triage
 on:
   pull_request_target:
     types: [opened, labeled, synchronized]
-  issue_comment:
-    types: [created]
   workflow_dispatch: 
 
 permissions:
@@ -25,16 +23,17 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `[Auto Triage] PR detected. Apply \`submission\` label or comment \`/check\` to run validation.`
+                body: `[Auto Triage] PR detected. Apply \`submission\` label to run validation.`
               });
             } catch (e) { console.log("Initial comment blocked: " + e.message); }
 
   validate-submission:
     if: |
       (github.event.pull_request && contains(github.event.pull_request.labels.*.name, 'submission')) ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/check')) ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout PR Code
         uses: actions/checkout@v4
@@ -66,8 +65,7 @@ jobs:
             };
 
             // --- UNIVERSAL PR RESOLVER ---
-            let prNumber = context.issue.number; 
-            if (context.payload.pull_request) prNumber = context.payload.pull_request.number;
+            let prNumber = context.payload.pull_request?.number || context.payload.issue?.number || context.issue.number;
 
             if (!prNumber) {
               console.log("[Auto Triage] No PR/Issue number found. Running in standalone mode.");
@@ -101,17 +99,31 @@ jobs:
                   isFailed = true;
                 }
 
-                const metaRegex = /\/\*[\s\S]*?@title:([\s\S]*?)@author:([\s\S]*?)@description:([\s\S]*?)@tags:[\s\S]*?@addedOn:([\s\S]*?)\*\//;
-                const match = content.match(metaRegex);
-                if (!match) {
-                  logs.push(`- The metadata header in "${filename}" is missing or formatted incorrectly. Check the template!`);
+                // --- UPDATED METADATA LOGIC (Order Independent) ---
+                const tags = ['@title:', '@author:', '@description:', '@tags:', '@addedOn:'];
+                const missing = tags.filter(t => !content.includes(t));
+                
+                if (missing.length > 0) {
+                  logs.push(`- The metadata header in "${filename}" is missing or formatted incorrectly (missing ${missing.join(' ')}).`);
                   isFailed = true;
                 } else {
-                  if (match[1].includes("getting_started") || match[2].includes("leo, edits")) {
+                  // Extract values for specific checks
+                  const getVal = (tag) => {
+                    const r = new RegExp(`${tag}\\s*([\\s\\S]*?)(?=@\\w+:|\\*\\/)`);
+                    const m = content.match(r);
+                    return m ? m[1].trim() : "";
+                  };
+
+                  const title = getVal('@title:');
+                  const author = getVal('@author:');
+                  const addedOn = getVal('@addedOn:');
+
+                  if (title.includes("getting_started") || author.includes("leo, edits")) {
                     logs.push(`- It looks like "${filename}" still has some example/template values in the metadata.`);
                     isFailed = true;
                   }
-                  const subD = new Date(match[4].trim());
+
+                  const subD = new Date(addedOn);
                   const diff = Math.abs(new Date() - subD) / (1000 * 60 * 60 * 24 * 30.44);
                   if (isNaN(subD.getTime()) || diff > 6) {
                     logs.push(`- The date in "${filename}" doesn't look right. Please set it to the current date.`);
@@ -145,14 +157,12 @@ jobs:
             body += logs.length ? logs.join('\n') : "Everything looks great! Your submission is ready be reviewed.";
             body += "\n```\n";
             
-            if (!isFailed) {
-              body += "#### [TOOLS]\n";
-              const headSha = context.payload.pull_request?.head?.sha || context.sha;
-              pullFiles.filter(f => f.filename.endsWith('.js')).forEach(f => {
-                const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/${headSha}/${f.filename}`;
-                body += `- [VIEW_RAW](${raw}) : ${path.basename(f.filename)}\n`;
-              });
-            }
+            body += "#### [TOOLS]\n";
+            const headSha = context.payload.pull_request?.head?.sha || context.sha;
+            pullFiles.filter(f => f.filename.endsWith('.js')).forEach(f => {
+              const raw = `https://github.com/${context.repo.owner}/${context.repo.repo}/raw/${headSha}/${f.filename}`;
+              body += `- [VIEW_RAW](${raw}) : ${path.basename(f.filename)}\n`;
+            });
 
             try {
               await github.rest.issues.createComment({
